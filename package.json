@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "build:standalone": "next build && node scripts/build-standalone.mjs",
+    "start:standalone": "node .next/standalone/server.js"
   },
   "dependencies": {
     "next": "^16.3.4",

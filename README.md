@@ -7,9 +7,13 @@ click targets over it.
 
 ```bash
 npm install
-npm run dev      # http://localhost:3000
-npm run build && npm run start
+npm run dev              # http://localhost:3000
+npm run build && npm start
+
+npm run build:standalone # self-contained bundle for the server
 ```
+
+Hosting on sPanel? See **[DEPLOY.md](DEPLOY.md)**.
 
 ## Layout approach
 
