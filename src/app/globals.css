@@ -1,0 +1,648 @@
+@import "tailwindcss";
+
+/* ==================================================================
+   Design tokens — gold sampled from the Team BodyMechanik poster
+================================================================== */
+@theme {
+  --font-display: var(--font-anton), "Arial Narrow", Impact, sans-serif;
+  --font-body: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-script: var(--font-script), "Brush Script MT", cursive;
+
+  --color-ink: #040303;
+  --color-ink-soft: #0b0907;
+
+  --color-gold-100: #fff6d2;
+  --color-gold-200: #f7dd8b;
+  --color-gold-300: #efc451;
+  --color-gold-400: #e0a62b;
+  --color-gold-500: #c8891a;
+  --color-gold-600: #9c6510;
+  --color-gold-700: #6a430a;
+  --color-gold-800: #3a2606;
+}
+
+/* ==================================================================
+   Base
+================================================================== */
+:root {
+  color-scheme: dark;
+
+  /* The brushed-metal ramp used for every gold surface */
+  --metal: linear-gradient(
+    180deg,
+    #fff8dd 0%,
+    #f9e08f 17%,
+    #e8b53a 40%,
+    #a96c10 53%,
+    #d9a02a 64%,
+    #f6d977 84%,
+    #fff3c4 100%
+  );
+}
+
+html {
+  background: #040303;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100svh;
+  background: #040303;
+  color: #e6d8bc;
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: #e0a62b;
+  color: #120c02;
+}
+
+:focus-visible {
+  outline: 2px solid #efc451;
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
+/* ==================================================================
+   Backdrop layers
+================================================================== */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* Warm pool of light behind the centre of the stage */
+.backdrop-glow {
+  position: absolute;
+  left: 50%;
+  top: 34%;
+  width: min(150vw, 1500px);
+  aspect-ratio: 1.55 / 1;
+  translate: -50% -50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(224, 166, 43, 0.3) 0%,
+    rgba(168, 110, 16, 0.15) 30%,
+    rgba(90, 55, 6, 0.07) 52%,
+    transparent 72%
+  );
+  filter: blur(12px);
+  animation: glow-breathe 9s ease-in-out infinite;
+}
+
+/* Cropped gym plates / dumbbells from the original artwork */
+.backdrop-rig {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: clamp(150px, 20vw, 330px);
+  background-repeat: no-repeat;
+  background-size: cover;
+  opacity: 0.55;
+}
+
+/* On a phone the rigs take up a third of the screen each — pull them back so
+   they stay texture rather than competing with the figures. */
+@media (max-width: 640px) {
+  .backdrop-rig {
+    width: clamp(105px, 27vw, 175px);
+    opacity: 0.3;
+  }
+}
+
+.backdrop-rig--left {
+  left: 0;
+  background-image: url("/gym-left.jpg");
+  background-position: right center;
+  mask-image: linear-gradient(to right, #000 0%, rgba(0, 0, 0, 0.35) 55%, transparent 100%);
+  animation: drift-left 22s ease-in-out infinite;
+}
+
+.backdrop-rig--right {
+  right: 0;
+  background-image: url("/gym-right.jpg");
+  background-position: left center;
+  mask-image: linear-gradient(to left, #000 0%, rgba(0, 0, 0, 0.35) 55%, transparent 100%);
+  animation: drift-right 26s ease-in-out infinite;
+}
+
+/* Vignette + floor haze */
+.backdrop-vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 45%, transparent 38%, rgba(4, 3, 3, 0.75) 78%, #040303 100%),
+    linear-gradient(to bottom, rgba(4, 3, 3, 0.85) 0%, transparent 22%, transparent 74%, #040303 100%);
+}
+
+/* Fine film grain */
+.backdrop-grain {
+  position: absolute;
+  inset: -50%;
+  opacity: 0.16;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: grain-shift 700ms steps(4) infinite;
+}
+
+/* Rising embers */
+.ember {
+  position: absolute;
+  bottom: -6vh;
+  border-radius: 9999px;
+  background: radial-gradient(circle, #ffe9a6 0%, #e0a62b 45%, rgba(224, 166, 43, 0) 72%);
+  animation-name: ember-rise;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform, opacity;
+}
+
+/* ==================================================================
+   Gold treatments
+================================================================== */
+
+/* Metallic text with a shine that sweeps across on a loop */
+.gold-text {
+  background-image:
+    linear-gradient(
+      100deg,
+      transparent 38%,
+      rgba(255, 255, 255, 0.28) 46%,
+      rgba(255, 255, 255, 0.8) 50%,
+      rgba(255, 255, 255, 0.28) 54%,
+      transparent 62%
+    ),
+    var(--metal);
+  background-size: 240% 100%, 100% 100%;
+  background-position: -140% 0, 0 0;
+  background-repeat: no-repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: shine 7s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* Flat gold for small text where a gradient would muddy legibility */
+.gold-flat {
+  color: #edc257;
+}
+
+/* Beveled gold frame: gradient border, dark plate inside */
+.plate {
+  position: relative;
+  background: var(--metal);
+  padding: 2px;
+  border-radius: 6px;
+  box-shadow:
+    0 0 0 1px rgba(58, 38, 6, 0.9),
+    0 14px 44px -14px rgba(224, 166, 43, 0.55);
+}
+
+.plate-inner {
+  border-radius: 4px;
+  background: linear-gradient(180deg, #171006 0%, #090603 55%, #120c04 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 226, 150, 0.22), inset 0 -1px 0 rgba(0, 0, 0, 0.8);
+}
+
+/* Hairline gold rule */
+.rule {
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(224, 166, 43, 0.75), transparent);
+}
+
+/* ==================================================================
+   Hero figures
+================================================================== */
+/* The black ground is keyed out of the asset itself (baked alpha), so the
+   silhouette is real and drop-shadow hugs the figures rather than a box. */
+.figures {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 14px 38px rgba(224, 166, 43, 0.38))
+    drop-shadow(0 0 90px rgba(224, 166, 43, 0.22));
+  animation: float 7s ease-in-out infinite;
+}
+
+/* ==================================================================
+   Pillars
+================================================================== */
+.pillar-ring {
+  display: grid;
+  place-items: center;
+  width: clamp(40px, min(8vw, 5.6vh), 60px);
+  aspect-ratio: 1;
+  border-radius: 9999px;
+  border: 1px solid rgba(224, 166, 43, 0.42);
+  background: radial-gradient(circle at 50% 30%, rgba(224, 166, 43, 0.16), transparent 70%);
+  transition: border-color 0.35s ease, box-shadow 0.35s ease, transform 0.35s ease;
+}
+
+.pillar:hover .pillar-ring,
+.pillar:focus-within .pillar-ring {
+  border-color: rgba(247, 221, 139, 0.9);
+  box-shadow: 0 0 26px -4px rgba(224, 166, 43, 0.75);
+  transform: translateY(-3px);
+}
+
+.pillar-ring svg {
+  width: 52%;
+  height: 52%;
+  stroke: #edc257;
+  fill: none;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke 0.35s ease;
+}
+
+.pillar:hover .pillar-ring svg {
+  stroke: #fff6d2;
+}
+
+/* ==================================================================
+   Notify form
+================================================================== */
+.notify-field {
+  width: 100%;
+  background: transparent;
+  border: 0;
+  color: #f4e7c8;
+  font-family: var(--font-body);
+  font-size: clamp(0.8rem, min(2.6vw, 1.75vh), 0.95rem);
+  letter-spacing: 0.02em;
+  outline: none;
+}
+
+.notify-field::placeholder {
+  color: rgba(214, 190, 140, 0.5);
+}
+
+/* Gold button with a sheen that runs across on hover */
+.btn-gold {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--metal);
+  color: #150d02;
+  border: 0;
+  border-radius: 4px;
+  font-family: var(--font-display);
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: filter 0.3s ease, transform 0.15s ease, box-shadow 0.3s ease;
+}
+
+.btn-gold::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  translate: -120% 0;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.65) 50%,
+    transparent 70%
+  );
+  transition: translate 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-gold:hover:not(:disabled) {
+  filter: brightness(1.08);
+  box-shadow: 0 10px 30px -10px rgba(224, 166, 43, 0.85);
+}
+
+.btn-gold:hover:not(:disabled)::after {
+  translate: 120% 0;
+}
+
+.btn-gold:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn-gold:disabled {
+  cursor: not-allowed;
+  filter: saturate(0.5) brightness(0.8);
+}
+
+/* Outlined gold link pill */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  border: 1px solid rgba(224, 166, 43, 0.5);
+  border-radius: 9999px;
+  color: #edc257;
+  transition: border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.pill:hover {
+  border-color: rgba(247, 221, 139, 0.95);
+  color: #fff6d2;
+  box-shadow: 0 0 24px -6px rgba(224, 166, 43, 0.7);
+  transform: translateY(-2px);
+}
+
+/* ==================================================================
+   Contact dialog
+================================================================== */
+.dialog {
+  margin: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  width: min(560px, calc(100vw - 2rem));
+  max-height: min(90svh, 800px);
+  overflow: visible;
+}
+
+.dialog::backdrop {
+  background: rgba(4, 3, 3, 0.78);
+  backdrop-filter: blur(6px);
+}
+
+/* Enter/exit transition. `allow-discrete` lets display and overlay animate,
+   so the dialog fades out instead of vanishing on close. */
+.dialog,
+.dialog::backdrop {
+  opacity: 0;
+  transition:
+    opacity 0.32s ease,
+    transform 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+    overlay 0.32s allow-discrete,
+    display 0.32s allow-discrete;
+}
+
+.dialog {
+  transform: translateY(16px) scale(0.97);
+}
+
+.dialog[open] {
+  opacity: 1;
+  transform: none;
+}
+
+.dialog[open]::backdrop {
+  opacity: 1;
+}
+
+@starting-style {
+  .dialog[open] {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+  .dialog[open]::backdrop {
+    opacity: 0;
+  }
+}
+
+/* The gold-edged panel, scrollable when the form outgrows a short screen */
+.dialog-panel {
+  position: relative;
+  max-height: min(90svh, 800px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, #171006 0%, #090603 55%, #120c04 100%) padding-box,
+    var(--metal) border-box;
+  border: 2px solid transparent;
+  box-shadow:
+    0 0 0 1px rgba(58, 38, 6, 0.9),
+    0 30px 80px -20px rgba(0, 0, 0, 0.9),
+    0 0 70px -20px rgba(224, 166, 43, 0.45);
+}
+
+.dialog-close {
+  position: absolute;
+  top: 0.7rem;
+  right: 0.7rem;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(224, 166, 43, 0.32);
+  background: rgba(0, 0, 0, 0.35);
+  color: #edc257;
+  cursor: pointer;
+  transition: border-color 0.25s ease, color 0.25s ease, background 0.25s ease;
+}
+
+.dialog-close:hover {
+  border-color: rgba(247, 221, 139, 0.85);
+  color: #fff6d2;
+  background: rgba(224, 166, 43, 0.14);
+}
+
+/* ==================================================================
+   Form fields
+================================================================== */
+.field-label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #edc257;
+  text-align: left;
+}
+
+.field {
+  display: block;
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border-radius: 4px;
+  border: 1px solid rgba(224, 166, 43, 0.26);
+  background: rgba(255, 255, 255, 0.03);
+  color: #f4e7c8;
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  line-height: 1.5;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+}
+
+.field::placeholder {
+  color: rgba(214, 190, 140, 0.4);
+}
+
+.field:focus {
+  outline: none;
+  border-color: rgba(247, 221, 139, 0.8);
+  background: rgba(255, 255, 255, 0.055);
+  box-shadow: 0 0 0 3px rgba(224, 166, 43, 0.16);
+}
+
+.field[aria-invalid="true"] {
+  border-color: rgba(248, 113, 113, 0.65);
+}
+
+.field-error {
+  margin-top: 0.3rem;
+  font-size: 0.72rem;
+  text-align: left;
+  color: #fca5a5;
+}
+
+/* ==================================================================
+   Entrance reveals — staggered via an inline --d delay
+================================================================== */
+.reveal {
+  opacity: 0;
+  animation: rise 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: var(--d, 0ms);
+}
+
+/* ==================================================================
+   Keyframes
+================================================================== */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes shine {
+  0% {
+    background-position: -140% 0, 0 0;
+  }
+  55%,
+  100% {
+    background-position: 240% 0, 0 0;
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-11px) scale(1.008);
+  }
+}
+
+@keyframes glow-breathe {
+  0%,
+  100% {
+    opacity: 0.75;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.07);
+  }
+}
+
+@keyframes ember-rise {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scale(0.6);
+  }
+  12% {
+    opacity: var(--peak, 0.75);
+  }
+  70% {
+    opacity: var(--peak, 0.75);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--drift, 20px), -108vh, 0) scale(1.15);
+  }
+}
+
+@keyframes drift-left {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(-10px);
+  }
+}
+
+@keyframes drift-right {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(10px);
+  }
+}
+
+@keyframes grain-shift {
+  0% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(-3%, 2%);
+  }
+  50% {
+    transform: translate(2%, -3%);
+  }
+  75% {
+    transform: translate(-2%, -2%);
+  }
+  100% {
+    transform: translate(3%, 1%);
+  }
+}
+
+@keyframes dot-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: rotate(45deg) scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: rotate(45deg) scale(1.15);
+  }
+}
+
+.dot-pulse {
+  animation: dot-pulse 2.6s ease-in-out infinite;
+}
+
+/* ==================================================================
+   Reduced motion — keep the composition, drop the movement
+================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+
+  .reveal {
+    opacity: 1;
+  }
+
+  .ember,
+  .backdrop-grain {
+    display: none;
+  }
+
+  .gold-text {
+    background-position: 240% 0, 0 0;
+  }
+}
