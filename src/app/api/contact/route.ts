@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { Resend } from "resend";
 import { site } from "@/lib/site";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -161,27 +160,43 @@ export async function POST(request: Request) {
   const { html, text } = buildEmail({ name, email, phone, message });
 
   try {
-    const resend = new Resend(apiKey);
-    const { data, error } = await resend.emails.send({
-      from,
-      to: to.split(",").map((address) => address.trim()),
-      replyTo: email,
-      subject: `New enquiry from ${name} — ${site.name}`,
-      html,
-      text,
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from,
+        to: to.split(",").map((address) => address.trim()),
+        reply_to: email,
+        subject: `New enquiry from ${name} — ${site.name}`,
+        html,
+        text,
+      }),
+      // Route handlers run through Next's instrumented fetch. Opt out of any
+      // caching so this is always a live request.
+      cache: "no-store",
+      signal: AbortSignal.timeout(15_000),
     });
 
-    if (error) {
-      console.error("[contact] Resend rejected the send:", error);
+    const payload = (await res.json().catch(() => null)) as
+      | { id?: string; message?: string; name?: string }
+      | null;
+
+    if (!res.ok) {
+      console.error("[contact] Resend returned HTTP", res.status, payload);
       return NextResponse.json(
         { message: "We couldn't send that just now. Please try again shortly." },
         { status: 502 },
       );
     }
 
-    console.info("[contact] sent", data?.id);
+    console.info("[contact] sent", payload?.id);
   } catch (error) {
-    console.error("[contact] send threw:", error);
+    // undici buries the real reason in `cause` — surface it, or this is undebuggable.
+    const err = error as Error & { cause?: unknown };
+    console.error("[contact] send threw:", err?.name, err?.message, "| cause:", err?.cause);
     return NextResponse.json(
       { message: "We couldn't send that just now. Please try again shortly." },
       { status: 502 },
