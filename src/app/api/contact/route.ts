@@ -1,5 +1,46 @@
+import { request as httpsRequest } from "node:https";
 import { NextResponse } from "next/server";
 import { site } from "@/lib/site";
+
+/**
+ * POST JSON using node:https rather than fetch.
+ *
+ * Node's fetch (undici) parses HTTP with a WebAssembly build of llhttp. On
+ * hosts that cap per-process virtual memory — common on panel/VPS hosting —
+ * a long-lived server can fail to instantiate that module, and every fetch
+ * dies with "WebAssembly.instantiate(): Out of memory" before opening a
+ * socket. node:https uses the native C++ parser and has no such dependency.
+ */
+function postJson(
+  url: string,
+  headers: Record<string, string>,
+  body: string,
+  timeoutMs = 15_000,
+): Promise<{ status: number; body: string }> {
+  return new Promise((resolve, reject) => {
+    const target = new URL(url);
+
+    const req = httpsRequest(
+      {
+        hostname: target.hostname,
+        port: target.port || 443,
+        path: `${target.pathname}${target.search}`,
+        method: "POST",
+        headers: { ...headers, "Content-Length": Buffer.byteLength(body) },
+      },
+      (res) => {
+        let data = "";
+        res.setEncoding("utf8");
+        res.on("data", (chunk) => (data += chunk));
+        res.on("end", () => resolve({ status: res.statusCode ?? 0, body: data }));
+      },
+    );
+
+    req.setTimeout(timeoutMs, () => req.destroy(new Error(`Timed out after ${timeoutMs}ms`)));
+    req.on("error", reject);
+    req.end(body);
+  });
+}
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -160,13 +201,13 @@ export async function POST(request: Request) {
   const { html, text } = buildEmail({ name, email, phone, message });
 
   try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
+    const res = await postJson(
+      "https://api.resend.com/emails",
+      {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
+      JSON.stringify({
         from,
         to: to.split(",").map((address) => address.trim()),
         reply_to: email,
@@ -174,24 +215,17 @@ export async function POST(request: Request) {
         html,
         text,
       }),
-      // Route handlers run through Next's instrumented fetch. Opt out of any
-      // caching so this is always a live request.
-      cache: "no-store",
-      signal: AbortSignal.timeout(15_000),
-    });
+    );
 
-    const payload = (await res.json().catch(() => null)) as
-      | { id?: string; message?: string; name?: string }
-      | null;
-
-    if (!res.ok) {
-      console.error("[contact] Resend returned HTTP", res.status, payload);
+    if (res.status < 200 || res.status >= 300) {
+      console.error("[contact] Resend returned HTTP", res.status, res.body.slice(0, 500));
       return NextResponse.json(
         { message: "We couldn't send that just now. Please try again shortly." },
         { status: 502 },
       );
     }
 
+    const payload = JSON.parse(res.body) as { id?: string };
     console.info("[contact] sent", payload?.id);
   } catch (error) {
     // undici buries the real reason in `cause` — surface it, or this is undebuggable.
